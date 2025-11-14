@@ -22,14 +22,33 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
 
+      - name: Build application (skip tests)
+        run: ./gradlew build -x test --no-daemon
 
       - name: Run application in background
-        run: java -jar build/libs/your-app.jar &
+        run: |
+          java -jar build/libs/*.jar --server.port=9999 > app.log 2>&1 &
+          echo $! > app.pid
 
-
-      - name: Wait for application to start
-        run: sleep 15
-
+      - name: Wait for application to start (port 9999)
+        run: |
+          for i in {1..30}; do
+            if curl -sSf http://localhost:9999/actuator/health >/dev/null 2>&1 || curl -sSf http://localhost:9999/ >/dev/null 2>&1; then
+              echo "App is up"
+              break
+            fi
+            echo "Waiting for app..."
+            sleep 1
+          done
+          # Выведем последние логи на случай проблем
+          tail -n +1 app.log || true
 
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew test --no-daemon
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+          fi
