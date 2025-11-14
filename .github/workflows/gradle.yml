@@ -25,11 +25,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+
       - name: Run System Under Test (SUT)
         run: |
+          # Запускаем JAR-файл в фоне (символ &)
           java -Duser.language=en -Duser.country=US -jar ./artifacts/app-mbank.jar &
+          # Даем 10 секунд на старт приложения
           sleep 10
         shell: bash
 
       - name: Run Gradle build and tests
+
         run: ./gradlew clean test --no-daemon
